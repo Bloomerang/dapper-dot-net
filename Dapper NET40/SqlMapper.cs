@@ -717,7 +717,8 @@ namespace Dapper
             {
                 return DbType.Object;
             }
-            throw new NotSupportedException(string.Format("The member {0} of type {1} cannot be used as a parameter value", name, type));
+            throw new NotSupportedException(string.Format("The member {0} of type {1} cannot be used as a parameter value", name, type));
+
         }
 
 
@@ -4333,6 +4334,17 @@ string name, object value = null, DbType? dbType = null, ParameterDirection? dir
         }
     }
 
+    [AttributeUsage(AttributeTargets.Property)]
+    public class ColumnAttribute : Attribute
+    {
+        public ColumnAttribute(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; set; }
+    }
+
     /// <summary>
     /// Represents default type mapping strategy used by Dapper
     /// </summary>
@@ -4441,8 +4453,11 @@ string name, object value = null, DbType? dbType = null, ParameterDirection? dir
         /// <returns>Mapping implementation</returns>
         public SqlMapper.IMemberMap GetMember(string columnName)
         {
-            var property = _properties.FirstOrDefault(p => string.Equals(p.Name, columnName, StringComparison.Ordinal))
-               ?? _properties.FirstOrDefault(p => string.Equals(p.Name, columnName, StringComparison.OrdinalIgnoreCase));
+            var property =
+                   _properties.FirstOrDefault(p => p.GetCustomAttributes(false).OfType<ColumnAttribute>().Any(attr => string.Equals(attr.Name, columnName, StringComparison.Ordinal)))
+                ?? _properties.FirstOrDefault(p => p.GetCustomAttributes(false).OfType<ColumnAttribute>().Any(attr => string.Equals(attr.Name, columnName, StringComparison.OrdinalIgnoreCase)))
+                ?? _properties.FirstOrDefault(p => string.Equals(p.Name, columnName, StringComparison.Ordinal))
+                ?? _properties.FirstOrDefault(p => string.Equals(p.Name, columnName, StringComparison.OrdinalIgnoreCase));
 
             if (property != null)
                 return new SimpleMemberMap(columnName, property);
